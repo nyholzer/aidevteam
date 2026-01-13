@@ -135,6 +135,16 @@ full_stack_dev = Agent(
     step_callback=log_agent_step
 )
 
+qa_engineer = Agent(
+    role='QA Engineer',
+    goal='Verify that all planned files were actually created in the workspace directory.',
+    backstory='You are a meticulous QA engineer. You validate that deliverables exist and are correct. You use the file reader tool to check for file existence.',
+    llm=coding_llm,
+    tools=[file_reader],
+    verbose=True,
+    step_callback=log_agent_step
+)
+
 # 3. KANBAN LOGIC
 # ---------------------------------------------------------
 
@@ -163,14 +173,35 @@ def process_ticket(ticket_path):
         context=[plan_task]
     )
 
+    qa_task = Task(
+        description=f"Verify that all files mentioned in the plan were actually created in ./workspace/. List each file found. Check the plan context for expected files.",
+        expected_output="A detailed report of which files exist and which are missing. If any are missing, report which ones.",
+        agent=qa_engineer,
+        context=[plan_task, build_task]
+    )
+
     crew = Crew(
-        agents=[spec_architect, full_stack_dev],
-        tasks=[plan_task, build_task],
+        agents=[spec_architect, full_stack_dev, qa_engineer],
+        tasks=[plan_task, build_task, qa_task],
         verbose=True
     )
 
     # Execute
     result = crew.kickoff()
+    
+    # Check if QA flagged missing files
+    qa_result = result if hasattr(result, 'raw') else str(result)
+    missing_files = "missing" in qa_result.lower() or "not found" in qa_result.lower() or "does not exist" in qa_result.lower()
+    
+    if missing_files:
+        print(f"\n[QA] Missing files detected. Retrying build...")
+        # Re-run just the build and QA tasks
+        retry_crew = Crew(
+            agents=[full_stack_dev, qa_engineer],
+            tasks=[build_task, qa_task],
+            verbose=True
+        )
+        result = retry_crew.kickoff()
 
     # Append Report
     report = f"\n\n## AI Report\n**Status**: Implementation Complete.\n**Summary**: {result}\n\n**Instructions**: Review the files in `workspace/`. If satisfied, change [ ] Approved to [x] Approved below (or just write 'Status: Approved').\n[ ] Approved"
