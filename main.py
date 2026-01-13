@@ -206,8 +206,8 @@ def process_ticket(ticket_path):
     # Execute
     result = crew.kickoff()
     
-    # Check if QA flagged failures
-    qa_result = result if hasattr(result, 'raw') else str(result)
+    # Convert result to string (CrewOutput object)
+    qa_result = str(result) if result else ""
     test_failed = "failed:" in qa_result.lower() or "missing" in qa_result.lower() or "not found" in qa_result.lower() or "hallucinated" in qa_result.lower() or "empty" in qa_result.lower()
     
     retry_count = 0
@@ -243,7 +243,7 @@ Save corrected files to ./workspace/ directory.""",
             verbose=True
         )
         result = retry_crew.kickoff()
-        qa_result = result if hasattr(result, 'raw') else str(result)
+        qa_result = str(result) if result else ""
         test_failed = "failed:" in qa_result.lower() or "missing" in qa_result.lower() or "not found" in qa_result.lower() or "hallucinated" in qa_result.lower() or "empty" in qa_result.lower()
 
     # Append Report
