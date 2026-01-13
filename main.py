@@ -1,12 +1,16 @@
 import os
 import time
 import shutil
+import warnings
 from crewai import Agent, Task, Crew, LLM
 from crewai_tools import FileWriterTool, FileReadTool
 from git import Repo
 import subprocess
 import urllib.request
 import urllib.error
+
+# Suppress Pydantic warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 # 1. SETUP
 # ---------------------------------------------------------
@@ -113,8 +117,9 @@ def ensure_ollama_running():
 # 2. LLM & AGENTS
 # ---------------------------------------------------------
 # Using local Ollama models for cost/privacy/hardware reasons
-logic_llm = LLM(model="ollama/phi3:mini", base_url="http://localhost:11434")
-coding_llm = LLM(model="ollama/phi3:mini", base_url="http://localhost:11434")
+# llama3.2 is better at tool calling and JSON generation than phi3:mini
+logic_llm = LLM(model="ollama/llama3.2:latest", base_url="http://localhost:11434")
+coding_llm = LLM(model="ollama/llama3.2:latest", base_url="http://localhost:11434")
 
 spec_architect = Agent(
     role='Spec Architect',
@@ -168,6 +173,16 @@ def process_ticket(ticket_path):
     # Read Ticket Content
     with open(in_progress_path, 'r') as f:
         ticket_content = f.read()
+    
+    try:
+        _execute_crew_workflow(ticket_content, in_progress_path)
+    except Exception as e:
+        print(f"[ERROR] Crew execution failed: {e}")
+        print("[INFO] Moving ticket back to todo for retry...")
+        shutil.move(in_progress_path, os.path.join(DIRS["todo"], filename))
+        raise
+
+def _execute_crew_workflow(ticket_content, in_progress_path):
 
     # Define Crew Tasks - TEST DRIVEN DEVELOPMENT WORKFLOW
     plan_task = Task(
@@ -241,7 +256,17 @@ If ANY file is missing, says FAILED in your report.""",
     )
 
     # Execute
-    result = crew.kickoff()
+    try:
+        print("[CREW] Starting workflow...")
+        result = crew.kickoff()
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "failed to parse llm response" in error_msg:
+            print("[ERROR] LLM response parsing failed. This usually means:")
+            print(f"  - Ollama crashed or is unresponsive")
+            print(f"  - Model weights corrupt")
+            print("  Try: pkill -9 ollama && sleep 2 && ollama serve &")
+        raise
     
     # Convert result to string (CrewOutput object)
     qa_result = str(result) if result else ""
