@@ -11,6 +11,8 @@ import urllib.error
 
 # Force CPU-only mode for Ollama (disable GPU to prevent crashes)
 os.environ["OLLAMA_NUM_GPU"] = "0"
+# Enable CrewAI tracing to capture raw LLM outputs for debugging
+os.environ["CREWAI_TRACING_ENABLED"] = "true"
 
 # Suppress Pydantic warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
@@ -166,9 +168,9 @@ def ensure_ollama_running():
 # 2. LLM & AGENTS
 # ---------------------------------------------------------
 # Using local Ollama models for cost/privacy/hardware reasons
-# neural-chat:7b is stable and good at tool calling without crashes
-logic_llm = LLM(model="ollama/neural-chat:7b", base_url="http://localhost:11434")
-coding_llm = LLM(model="ollama/neural-chat:7b", base_url="http://localhost:11434")
+# qwen2:7b is better at JSON tool-calling and instruction-following vs neural-chat:7b
+logic_llm = LLM(model="ollama/qwen2:7b", base_url="http://localhost:11434", temperature=0)
+coding_llm = LLM(model="ollama/qwen2:7b", base_url="http://localhost:11434", temperature=0)
 
 spec_architect = Agent(
     role='Spec Architect',
@@ -235,44 +237,29 @@ def _execute_crew_workflow(ticket_content, in_progress_path, filename):
 
     # Define Crew Tasks - TEST DRIVEN DEVELOPMENT WORKFLOW
     plan_task = Task(
-        description=f"Analyze this ticket:\n{ticket_content}\nCreate a step-by-step implementation plan with clear success criteria.",
+        description=f"Analyze this ticket:\n{ticket_content}\nCreate a step-by-step implementation plan with clear success criteria.\n\nIMPORTANT: When specifying tool invocations for file creation, OUTPUT EXACTLY one JSON object that matches the FileWriterTool schema and nothing else. The JSON object must look like: {\"filename\": string, \"directory\": string (optional), \"overwrite\": bool, \"content\": string}. Do NOT include any extra commentary outside the JSON. All file creation MUST be executed via tool calls.",
         expected_output="A detailed plan listing files to create, code logic, and testable success criteria.",
         agent=spec_architect
     )
 
     test_task = Task(
-        description="""CRITICAL: You MUST write test files to disk using the File Writer Tool. Do NOT just describe tests.
-
-Based on the plan, create test cases that verify all requirements. 
-For each test file:
-1. Use the File Writer Tool with filename, content, and directory='./workspace/tests'
-2. Write real, runnable test code (use pytest or unittest format)
-3. Tests must be specific and catch real bugs
-
-EXAMPLES of what to do:
-- Call: File Writer Tool with filename='test_example.py', content='import pytest\\ndef test_something():\\n    assert True', directory='./workspace/tests'
-- Do NOT just say "I will create test_example.py" - actually use the tool
-
-Write at least 2-3 test files.""",
-        expected_output="Test files actually written to ./workspace/tests/ that validate the requirements.",
+        description="""CRITICAL: Call File Writer Tool to create test files. Do NOT describe what you would do.
+For each test file from the plan:
+- Call File Writer Tool with: {"filename": "test_[name].py", "directory": "./workspace/tests", "overwrite": true, "content": "[pytest code]"}
+- Write REAL pytest code (not placeholders)
+- Create at least 2-3 test files by calling the tool multiple times""",
+        expected_output="Test files in ./workspace/tests with real pytest test code.",
         agent=test_engineer,
         context=[plan_task]
     )
 
     build_task = Task(
-        description="""CRITICAL: You MUST write code files to disk using the File Writer Tool. Do NOT just describe code.
-
-Implement the code based on the plan. For each file:
-1. Use the File Writer Tool with filename, content, and directory='./workspace'
-2. Write actual, complete, functional code (not placeholders or TODOs)
-3. Make sure code logic matches the plan
-
-EXAMPLES of what to do:
-- Call: File Writer Tool with filename='script.py', content='def main():\\n    print("hello")', directory='./workspace'
-- Do NOT just say "I will create script.py" - actually use the tool
-
-After writing all files, verify by reading them back with the File Reader Tool.""",
-        expected_output="Source code files actually written to disk and verified to exist with real content.",
+        description="""CRITICAL: Call File Writer Tool to create code files. Do NOT describe what you would do.
+For each code file from the plan:
+- Call File Writer Tool with: {"filename": "[name]", "directory": "./workspace", "overwrite": true, "content": "[complete code]"}
+- Write COMPLETE FUNCTIONAL code (no TODOs, no placeholders)
+- After writing all files, call File Reader Tool to verify each file exists with real content""",
+        expected_output="Source code files in ./workspace with complete functional code verified by reading them back.",
         agent=full_stack_dev,
         context=[plan_task, test_task]
     )
@@ -301,7 +288,8 @@ If ANY file is missing, says FAILED in your report.""",
     crew = Crew(
         agents=[spec_architect, test_engineer, full_stack_dev, qa_engineer],
         tasks=[plan_task, test_task, build_task, qa_task],
-        verbose=True
+        verbose=True,
+        tracing=True
     )
 
     # Execute
@@ -367,6 +355,14 @@ If ANY file is missing, says FAILED in your report.""",
                     else:
                         print(f"[FALLBACK] Failed to write file from described action: {res.get('error')}")
 
+        # Detect prose action descriptions and warn
+        prose_actions = re.findall(r"Action:\s*([^:\n]+(?:Create|Write|Generate|Setup|Initialize)[^:\n]*)", raw, re.IGNORECASE)
+        if prose_actions:
+            print("[FALLBACK] WARNING: Agent output prose actions instead of tool calls:")
+            for action in prose_actions[:3]:
+                print(f"  - {action.strip()}")
+            print("[FALLBACK] This indicates agent didn't invoke tools properly. Qwen2 model should help, but check task prompts.")
+
         if wrote_any:
             print("[FALLBACK] Completed executing described FileWriter actions found in agent output.")
     except Exception as e:
@@ -405,7 +401,8 @@ Save corrected files to ./workspace/ directory.""",
         retry_crew = Crew(
             agents=[full_stack_dev, qa_engineer],
             tasks=[fix_task, qa_task],
-            verbose=True
+            verbose=True,
+            tracing=True
         )
         result = retry_crew.kickoff()
         qa_result = str(result) if result else ""

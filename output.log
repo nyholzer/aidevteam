@@ -1,1 +1,241 @@
 nohup: ignoring input
+--- AI Dev Team Started ---
+Monitoring ./tickets/todo...
+
+[KANBAN] Approval Detected: test_approval.md
+[GIT] Snapshot saved.
+
+[KANBAN] Picking up: 001 Project Workspace Initialization.md
+╭───────────────────────── 🚀 Crew Execution Started ──────────────────────────╮
+│                                                                              │
+│  Crew Execution Started                                                      │
+│  Name:                                                                       │
+│  crew                                                                        │
+│  ID:                                                                         │
+│  62c8e1ad-be35-4192-b493-87ff33e663a8                                        │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭────────────────────────────── 📋 Task Started ───────────────────────────────╮
+│                                                                              │
+│  Task Started                                                                │
+│  Name: Analyze this ticket:                                                  │
+│  # Feature: Project Workspace Initialization                                 │
+│                                                                              │
+│  ## Description                                                              │
+│  Create a dedicated directory for a new project named repo_analyzer_v1.      │
+│  Inside this directory, set up a standard sub-folder structure to keep the   │
+│  code, data, and logs separate.                                              │
+│                                                                              │
+│  ## Requirements                                                             │
+│                                                                              │
+│      Create a root folder: projects/repo_analyzer_v1/.                       │
+│                                                                              │
+│      Create sub-folders:                                                     │
+│                                                                              │
+│          projects/repo_analyzer_v1/src/ (for code)                           │
+│                                                                              │
+│          projects/repo_analyzer_v1/output/ (for JSON/Metadata files)         │
+│                                                                              │
+│          projects/repo_analyzer_v1/logs/ (for execution logs)                │
+│                                                                              │
+│      Create a placeholder README.md inside the project root explaining the   │
+│  project purpose.                                                            │
+│  Create a step-by-step implementation plan.                                  │
+│  ID: cbc2c0e5-59e9-41c4-8a28-f983102c3749                                    │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭────────────────────────────── 🤖 Agent Started ──────────────────────────────╮
+│                                                                              │
+│  Agent: Spec Architect                                                       │
+│                                                                              │
+│  Task: Analyze this ticket:                                                  │
+│  # Feature: Project Workspace Initialization                                 │
+│                                                                              │
+│  ## Description                                                              │
+│  Create a dedicated directory for a new project named repo_analyzer_v1.      │
+│  Inside this directory, set up a standard sub-folder structure to keep the   │
+│  code, data, and logs separate.                                              │
+│                                                                              │
+│  ## Requirements                                                             │
+│                                                                              │
+│      Create a root folder: projects/repo_analyzer_v1/.                       │
+│                                                                              │
+│      Create sub-folders:                                                     │
+│                                                                              │
+│          projects/repo_analyzer_v1/src/ (for code)                           │
+│                                                                              │
+│          projects/repo_analyzer_v1/output/ (for JSON/Metadata files)         │
+│                                                                              │
+│          projects/repo_analyzer_v1/logs/ (for execution logs)                │
+│                                                                              │
+│      Create a placeholder README.md inside the project root explaining the   │
+│  project purpose.                                                            │
+│  Create a step-by-step implementation plan.                                  │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────── ❌ LLM Error ────────────────────────────────╮
+│                                                                              │
+│  LLM Call Failed                                                             │
+│  Error: litellm.APIConnectionError: OllamaException - {"error":"llama        │
+│  runner process has terminated: exit status 2"}                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭────────────────────────────── 📋 Task Failure ───────────────────────────────╮
+│                                                                              │
+│  Task Failed                                                                 │
+│  Name:                                                                       │
+│  Analyze this ticket:                                                        │
+│  # Feature: Project Workspace Initialization                                 │
+│                                                                              │
+│  ## Description                                                              │
+│  Create a dedicated directory for a new project named repo_analyzer_v1.      │
+│  Inside this directory, set up a standard sub-folder structure to keep the   │
+│  code, data, and logs separate.                                              │
+│                                                                              │
+│  ## Requirements                                                             │
+│                                                                              │
+│      Create a root folder: projects/repo_analyzer_v1/.                       │
+│                                                                              │
+│      Create sub-folders:                                                     │
+│                                                                              │
+│          projects/repo_analyzer_v1/src/ (for code)                           │
+│                                                                              │
+│          projects/repo_analyzer_v1/output/ (for JSON/Metadata files)         │
+│                                                                              │
+│          projects/repo_analyzer_v1/logs/ (for execution logs)                │
+│                                                                              │
+│      Create a placeholder README.md inside the project root explaining the   │
+│  project purpose.                                                            │
+│  Create a step-by-step implementation plan.                                  │
+│  Agent:                                                                      │
+│  Spec Architect                                                              │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+Traceback (most recent call last):
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 221, in _make_common_sync_call
+╭──────────────────────────────── Crew Failure ────────────────────────────────╮
+│                                                                              │
+│  Crew Execution Failed                                                       │
+│  Name:                                                                       │
+│  crew                                                                        │
+│  ID:                                                                         │
+│  62c8e1ad-be35-4192-b493-87ff33e663a8                                        │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+    response = sync_httpx_client.post(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+╭─────────────────────────────── Tracing Status ───────────────────────────────╮
+│                                                                              │
+│  Info: Tracing is disabled.                                                  │
+│                                                                              │
+│  To enable tracing, do any one of these:                                     │
+│  • Set tracing=True in your Crew/Flow code                                   │
+│  • Set CREWAI_TRACING_ENABLED=true in your project's .env file               │
+│  • Run: crewai traces enable                                                 │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/litellm/llms/custom_httpx/http_handler.py", line 979, in post
+    raise e
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/litellm/llms/custom_httpx/http_handler.py", line 961, in post
+    response.raise_for_status()
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://localhost:11434/api/generate'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/litellm/main.py", line 3727, in completion
+    response = base_llm_http_handler.completion(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 524, in completion
+    response = self._make_common_sync_call(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 246, in _make_common_sync_call
+    raise self._handle_error(e=e, provider_config=provider_config)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 4386, in _handle_error
+    raise provider_config.get_error_class(
+litellm.llms.ollama.common_utils.OllamaError: {"error":"llama runner process has terminated: exit status 2"}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/nissan/ai-dev-team/main.py", line 148, in <module>
+    # Read Ticket Content
+    ^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/main.py", line 138, in run_loop
+    # 3. KANBAN LOGIC
+                ^^^^^^
+  File "/home/nissan/ai-dev-team/main.py", line 93, in process_ticket
+    try:
+         
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/crew.py", line 714, in kickoff
+    result = self._run_sequential_process()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/crew.py", line 1073, in _run_sequential_process
+    return self._execute_tasks(self.tasks)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/crew.py", line 1159, in _execute_tasks
+    task_output = task.execute_sync(
+                  ^^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/task.py", line 458, in execute_sync
+    return self._execute_core(agent, context, tools)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/task.py", line 695, in _execute_core
+    raise e  # Re-raise the exception after emitting the event
+    ^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/task.py", line 626, in _execute_core
+    result = agent.execute_task(
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/agent/core.py", line 416, in execute_task
+    raise e
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/agent/core.py", line 394, in execute_task
+    result = self._execute_without_timeout(task_prompt, task)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/agent/core.py", line 490, in _execute_without_timeout
+    return self.agent_executor.invoke(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/agents/crew_agent_executor.py", line 196, in invoke
+    formatted_answer = self._invoke_loop()
+                       ^^^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/agents/crew_agent_executor.py", line 308, in _invoke_loop
+    raise e
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/agents/crew_agent_executor.py", line 237, in _invoke_loop
+    answer = get_llm_response(
+             ^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/utilities/agent_utils.py", line 276, in get_llm_response
+    raise e
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/utilities/agent_utils.py", line 268, in get_llm_response
+    answer = llm.call(
+             ^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/llm.py", line 1677, in call
+    result = self._handle_non_streaming_response(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/crewai/llm.py", line 1146, in _handle_non_streaming_response
+    response = litellm.completion(**params)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/litellm/utils.py", line 1651, in wrapper
+    raise e
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/litellm/utils.py", line 1515, in wrapper
+    result = original_function(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/litellm/main.py", line 4159, in completion
+    raise exception_type(
+          ^^^^^^^^^^^^^^^
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/litellm/litellm_core_utils/exception_mapping_utils.py", line 2346, in exception_type
+    raise e
+  File "/home/nissan/ai-dev-team/.venv/lib/python3.12/site-packages/litellm/litellm_core_utils/exception_mapping_utils.py", line 2315, in exception_type
+    raise APIConnectionError(
+litellm.exceptions.APIConnectionError: litellm.APIConnectionError: OllamaException - {"error":"llama runner process has terminated: exit status 2"}
