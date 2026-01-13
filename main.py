@@ -380,9 +380,45 @@ If ANY file is missing, says FAILED in your report.""",
             print("[FALLBACK] Completed executing described FileWriter actions found in agent output.")
     except Exception as e:
         print(f"[FALLBACK] Error while attempting to execute described tool calls: {e}")
+    def _list_workspace_files():
+        files = []
+        for root, _, filenames in os.walk(WORKSPACE_DIR):
+            for name in filenames:
+                rel = os.path.relpath(os.path.join(root, name), WORKSPACE_DIR)
+                files.append(rel)
+        return sorted(files)
+
+    def _check_required_outputs():
+        files = _list_workspace_files()
+        issues = []
+        if not files:
+            issues.append("No files were created in workspace.")
+        tests = [f for f in files if f.startswith("tests/")]
+        if not tests:
+            issues.append("No tests were created in workspace/tests.")
+        return issues
+
+    def _run_tests():
+        tests_dir = os.path.join(WORKSPACE_DIR, "tests")
+        if not os.path.isdir(tests_dir):
+            return False, "Tests directory not found; skipping test run."
+        try:
+            completed = subprocess.run(
+                ["pytest", "-q", tests_dir],
+                cwd=WORKSPACE_DIR,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except FileNotFoundError:
+            return False, "pytest not available in environment."
+        output = (completed.stdout or "") + (completed.stderr or "")
+        return completed.returncode == 0, output.strip()
+
     # Convert result to string (CrewOutput object)
     qa_result = str(result) if result else ""
-    test_failed = "failed:" in qa_result.lower() or "missing" in qa_result.lower() or "not found" in qa_result.lower() or "hallucinated" in qa_result.lower() or "empty" in qa_result.lower()
+    qa_result_lower = qa_result.lower()
+    test_failed = "failed:" in qa_result_lower or "missing" in qa_result_lower or "not found" in qa_result_lower or "hallucinated" in qa_result_lower or "empty" in qa_result_lower
     
     retry_count = 0
     while test_failed and retry_count < 2:
@@ -419,10 +455,18 @@ Save corrected files to ./workspace/ directory.""",
         )
         result = retry_crew.kickoff()
         qa_result = str(result) if result else ""
-        test_failed = "failed:" in qa_result.lower() or "missing" in qa_result.lower() or "not found" in qa_result.lower() or "hallucinated" in qa_result.lower() or "empty" in qa_result.lower()
+        qa_result_lower = qa_result.lower()
+        test_failed = "failed:" in qa_result_lower or "missing" in qa_result_lower or "not found" in qa_result_lower or "hallucinated" in qa_result_lower or "empty" in qa_result_lower
+
+    output_issues = _check_required_outputs()
+    tests_passed, test_output = _run_tests()
+    if output_issues:
+        test_failed = True
+    if not tests_passed:
+        test_failed = True
 
     # Append Report
-    report = f"\n\n## AI Report\n**Status**: {'Implementation Complete.' if not test_failed else 'Completed with issues - manual review needed.'}\n**Summary**: {result}\n\n**Instructions**: Review the files in `workspace/`. If satisfied, change [ ] Approved to [x] Approved below (or just write 'Status: Approved').\n[ ] Approved"
+    report = f"\n\n## AI Report\n**Status**: {'Implementation Complete.' if not test_failed else 'Completed with issues - manual review needed.'}\n**Summary**: {result}\n\n**Automated Checks**:\n- Output checks: {'PASS' if not output_issues else 'FAIL'}\n- Test run: {'PASS' if tests_passed else 'FAIL'}\n\n**Output Check Details**:\n{os.linesep.join(output_issues) if output_issues else 'All required outputs detected.'}\n\n**Test Output**:\n{test_output or 'No test output.'}\n\n**Instructions**: Review the files in `workspace/`. If satisfied, change [ ] Approved to [x] Approved below (or just write 'Status: Approved').\n[ ] Approved"
     
     # DEBUG: Check what files were actually created
     print("\n[DEBUG] Files in workspace after crew execution:")
@@ -440,6 +484,10 @@ Save corrected files to ./workspace/ directory.""",
     
     with open(in_progress_path, 'a') as f:
         f.write(report)
+
+    if test_failed:
+        print(f"[KANBAN] Keeping ticket in progress due to failed checks: {filename}")
+        return
 
     # Move to Review
     in_review_path = os.path.join(DIRS["in_review"], filename)
