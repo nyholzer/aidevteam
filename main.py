@@ -216,14 +216,22 @@ def run_loop():
     print(f"Monitoring {DIRS['todo']}...")
     
     while True:
-        # 1. Check Todo
+        # 1. Check In Progress (priority - resume interrupted tickets first)
+        # sorted() ensures lexicographical order i.e. 001, 002, 003...
+        in_progress_files = sorted([f for f in os.listdir(DIRS["in_progress"]) if f.endswith(".md")])
+        if in_progress_files:
+            print(f"\n[KANBAN] Resuming in-progress ticket: {in_progress_files[0]}")
+            process_ticket(os.path.join(DIRS["in_progress"], in_progress_files[0]))
+            continue
+        
+        # 2. Check Todo
         # sorted() ensures lexicographical order i.e. 001, 002, 003...
         todo_files = sorted([f for f in os.listdir(DIRS["todo"]) if f.endswith(".md")])
         if todo_files:
             process_ticket(os.path.join(DIRS["todo"], todo_files[0]))
             continue # Immediately look for next task if one finished (or check review)
         
-        # 2. Check Approvals
+        # 3. Check Approvals
         check_approvals()
 
         # Sleep to avoid CPU spin
