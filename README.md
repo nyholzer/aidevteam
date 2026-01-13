@@ -8,7 +8,7 @@ This system transforms your VS Code file explorer into a project management tool
 
 **Key Features:**
 - **Privacy First**: Runs 100% locally using Ollama.
-- **No API Costs**: Uses open-source models (Llama 3, Phi-3).
+- **No API Costs**: Uses open-source models via Ollama.
 - **Kanban Workflow**: `Todo` -> `In Progress` -> `In Review` -> `Done`.
 - **Auto-Approval**: Marking a ticket as `[x] Approved` triggers an automatic Git commit.
 
@@ -17,10 +17,13 @@ This system transforms your VS Code file explorer into a project management tool
 1.  **Prerequisites**:
     - [Ollama](https://ollama.com/) installed and running.
     - Python 3.12+
-    - Pull required models:
+    - Pull required models (defaults are configured in `main.py`):
       ```bash
-      ollama pull llama3.2    # For Logic/Planning
-      ollama pull phi3:mini   # For Coding
+      ollama pull neural-chat:7b
+      ```
+    - Install pytest (used for automated test runs):
+      ```bash
+      pip install pytest
       ```
 
 2.  **Installation**:
@@ -44,6 +47,7 @@ This system transforms your VS Code file explorer into a project management tool
 2.  **AI Works**:
     - The system detects the file and moves it to `tickets/in_progress/`.
     - Agents analyze the spec and generate code in the `workspace/` folder.
+    - Automated checks verify that files exist and `pytest` passes before a ticket can move to review.
     - **Note**: This can take minutes on CPU.
 
 3.  **Review**:
