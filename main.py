@@ -122,9 +122,9 @@ def ensure_ollama_running():
 # 2. LLM & AGENTS
 # ---------------------------------------------------------
 # Using local Ollama models for cost/privacy/hardware reasons
-# llama3.2 is better at tool calling and JSON generation than phi3:mini
-logic_llm = LLM(model="ollama/llama3.2:latest", base_url="http://localhost:11434")
-coding_llm = LLM(model="ollama/llama3.2:latest", base_url="http://localhost:11434")
+# neural-chat:7b is stable and good at tool calling without crashes
+logic_llm = LLM(model="ollama/neural-chat:7b", base_url="http://localhost:11434")
+coding_llm = LLM(model="ollama/neural-chat:7b", base_url="http://localhost:11434")
 
 spec_architect = Agent(
     role='Spec Architect',
