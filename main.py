@@ -47,6 +47,50 @@ except:
 file_writer = FileWriterTool(directory=WORKSPACE_DIR)
 file_reader = FileReadTool(directory=WORKSPACE_DIR)
 
+
+def call_file_writer_from_dict(payload: dict) -> dict:
+    """
+    Normalize a payload dict and call the FileWriterTool correctly.
+
+    Accepts keys: filename, directory or path, overwrite, content.
+    Normalizes relative directories to live under WORKSPACE_DIR.
+    Returns a dict with status and target path or error.
+    """
+    try:
+        fn = payload.get("filename")
+        if not fn:
+            return {"ok": False, "error": "missing filename"}
+
+        # map aliases
+        dir_in = payload.get("directory") or payload.get("path") or "./"
+
+        # Normalize directory into workspace if relative
+        if dir_in == "." or dir_in == "./" or not os.path.isabs(dir_in):
+            # strip leading ./
+            rel = dir_in[2:] if dir_in.startswith("./") else (dir_in.lstrip("./") or "")
+            target_dir = os.path.normpath(os.path.join(WORKSPACE_DIR, rel))
+        else:
+            target_dir = dir_in
+
+        os.makedirs(target_dir, exist_ok=True)
+
+        # Prepare args for file_writer.run
+        args = {
+            "filename": fn,
+            "directory": target_dir,
+            "overwrite": payload.get("overwrite", True),
+            "content": payload.get("content", ""),
+        }
+
+        # use the run(**kwargs) API
+        res = file_writer.run(**args)
+
+        # Determine written path
+        written = os.path.join(target_dir, fn)
+        return {"ok": True, "path": os.path.relpath(written), "detail": res}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
 # Logging Helper
 def log_agent_step(step_output):
     """
@@ -273,6 +317,60 @@ If ANY file is missing, says FAILED in your report.""",
             print("  Try: pkill -9 ollama && sleep 2 && ollama serve &")
         raise
     
+    # Fallback executor: parse agent output for JSON-like tool-call objects
+    # and actually write files if the agent described writes instead of using the tool.
+    try:
+        import json, re
+
+        def _extract_json_objects(text):
+            objs = []
+            # crude scanner to find balanced braces and parse JSON
+            for i, ch in enumerate(text):
+                if ch == '{':
+                    depth = 0
+                    for j in range(i, len(text)):
+                        if text[j] == '{':
+                            depth += 1
+                        elif text[j] == '}':
+                            depth -= 1
+                            if depth == 0:
+                                snippet = text[i:j+1]
+                                try:
+                                    objs.append(json.loads(snippet))
+                                except Exception:
+                                    pass
+                                break
+            return objs
+
+        raw = str(result) if result else ""
+        candidates = _extract_json_objects(raw)
+        wrote_any = False
+        for obj in candidates:
+            # support either a single dict or nested structure
+            if isinstance(obj, dict):
+                items = [obj]
+            elif isinstance(obj, list):
+                items = obj
+            else:
+                continue
+
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                # normalize keys
+                if 'filename' in item and 'content' in item:
+                    # Use the wrapper to reliably call the FileWriterTool
+                    res = call_file_writer_from_dict(item)
+                    if res.get('ok'):
+                        print(f"[FALLBACK] Wrote file: {res.get('path')}")
+                        wrote_any = True
+                    else:
+                        print(f"[FALLBACK] Failed to write file from described action: {res.get('error')}")
+
+        if wrote_any:
+            print("[FALLBACK] Completed executing described FileWriter actions found in agent output.")
+    except Exception as e:
+        print(f"[FALLBACK] Error while attempting to execute described tool calls: {e}")
     # Convert result to string (CrewOutput object)
     qa_result = str(result) if result else ""
     test_failed = "failed:" in qa_result.lower() or "missing" in qa_result.lower() or "not found" in qa_result.lower() or "hallucinated" in qa_result.lower() or "empty" in qa_result.lower()
