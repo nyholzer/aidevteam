@@ -213,11 +213,33 @@ def process_ticket(ticket_path):
     retry_count = 0
     while test_failed and retry_count < 2:
         retry_count += 1
-        print(f"\n[QA] Issues detected. Retry attempt {retry_count}/2...")
-        # Re-run the build and QA tasks
+        print(f"\n[QA FEEDBACK] Issues detected on attempt {retry_count}:")
+        print(qa_result)
+        print(f"\n[RETRY] Asking Full Stack Dev to fix based on QA feedback...")
+        
+        # Create a fix task with explicit QA feedback
+        fix_task = Task(
+            description=f"""The QA Engineer found these issues with your code:
+
+{qa_result}
+
+Please fix EVERY issue mentioned above. Re-read the plan and ensure:
+1. All required files are created
+2. All code is real and functional (not placeholder or hallucinated)
+3. Files are in the correct locations
+4. Tests pass
+5. No empty sections or TODOs
+
+Save corrected files to ./workspace/ directory.""",
+            expected_output="All issues fixed. Code is complete and ready for re-validation.",
+            agent=full_stack_dev,
+            context=[plan_task, test_task]
+        )
+        
+        # Re-run fix + QA validation
         retry_crew = Crew(
             agents=[full_stack_dev, qa_engineer],
-            tasks=[build_task, qa_task],
+            tasks=[fix_task, qa_task],
             verbose=True
         )
         result = retry_crew.kickoff()
