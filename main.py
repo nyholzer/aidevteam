@@ -9,6 +9,9 @@ import subprocess
 import urllib.request
 import urllib.error
 
+# Force CPU-only mode for Ollama (disable GPU to prevent crashes)
+os.environ["OLLAMA_NUM_GPU"] = "0"
+
 # Suppress Pydantic warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
@@ -82,6 +85,7 @@ def log_agent_step(step_output):
 # Ollama Check
 def ensure_ollama_running():
     print("[INIT] Checking Ollama status...")
+    print("[INIT] Running in CPU-only mode (OLLAMA_NUM_GPU=0)")
     url = "http://localhost:11434"
     
     # Try connecting
@@ -95,7 +99,7 @@ def ensure_ollama_running():
     # Not running, attempt to start
     print("[INIT] Ollama not found. Attempting to start 'ollama serve'...")
     try:
-        # Start in background
+        # Start in background with CPU-only mode
         subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except FileNotFoundError:
         print("[ERROR] 'ollama' command not found. Please install Ollama (https://ollama.com) or start it manually.")
@@ -113,6 +117,7 @@ def ensure_ollama_running():
             print(".", end="", flush=True)
             
     print("\\n[ERROR] Timed out waiting for Ollama to start. Please check logs or start manually.")
+    print("[INFO] Tip: Start with CPU-only: OLLAMA_NUM_GPU=0 ollama serve")
 
 # 2. LLM & AGENTS
 # ---------------------------------------------------------
