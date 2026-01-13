@@ -4,7 +4,12 @@ import shutil
 from crewai import Agent, Task, Crew, LLM
 from crewai_tools import FileWriterTool, FileReadTool
 from git import Repo
+import subprocess
+import urllib.request
+import urllib.error
 
+# 1. SETUP
+# ---------------------------------------------------------
 # 1. SETUP
 # ---------------------------------------------------------
 TICKETS_DIR = "./tickets"
@@ -15,12 +20,15 @@ DIRS = {
     "done": os.path.join(TICKETS_DIR, "done"),
 }
 WORKSPACE_DIR = "./workspace"
+LOGS_DIR = "./logs"
 
 # Ensure directories exist
 for d in DIRS.values():
     os.makedirs(d, exist_ok=True)
 if not os.path.exists(WORKSPACE_DIR):
     os.makedirs(WORKSPACE_DIR)
+if not os.path.exists(LOGS_DIR):
+    os.makedirs(LOGS_DIR)
 
 # Git Setup
 try:
@@ -32,10 +40,80 @@ except:
 file_writer = FileWriterTool(directory=WORKSPACE_DIR)
 file_reader = FileReadTool(directory=WORKSPACE_DIR)
 
+# Logging Helper
+def log_agent_step(step_output):
+    """
+    Callback to log agent thought process to a file.
+    """
+    logfile = os.path.join(LOGS_DIR, "activity.log")
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    
+    # step_output is typically a tuple or object from CrewAI, 
+    # we'll try to extract relevant text (thought/tool/result).
+    # CrewAI step_callback receives the AgentStep object.
+    
+    try:
+        # Depending on CrewAI version, this might vary.
+        # We'll log the raw output or formatted message.
+        log_message = f"[{timestamp}] {step_output}\n"
+        
+        # If it's an object with a 'thought' or 'result' attribute:
+        if hasattr(step_output, 'thought'):
+            log_message = f"[{timestamp}] [THOUGHT] {step_output.thought}\n"
+        if hasattr(step_output, 'tool'):
+            log_message += f"    [TOOL] Using {step_output.tool} with input: {step_output.tool_input}\n"
+        if hasattr(step_output, 'result'):
+            log_message += f"    [RESULT] {step_output.result}\n"
+            
+    except Exception as e:
+        log_message = f"[{timestamp}] [RAW] {str(step_output)}\n"
+
+    with open(logfile, "a") as f:
+        f.write(log_message)
+    
+    # Also print to stdout for visibility if running interactively
+    # Also print to stdout for visibility if running interactively
+    print(log_message.strip())
+
+# Ollama Check
+def ensure_ollama_running():
+    print("[INIT] Checking Ollama status...")
+    url = "http://localhost:11434"
+    
+    # Try connecting
+    try:
+        urllib.request.urlopen(url, timeout=1)
+        print("[INIT] Ollama is running.")
+        return
+    except (urllib.error.URLError, ConnectionRefusedError):
+        pass
+
+    # Not running, attempt to start
+    print("[INIT] Ollama not found. Attempting to start 'ollama serve'...")
+    try:
+        # Start in background
+        subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        print("[ERROR] 'ollama' command not found. Please install Ollama (https://ollama.com) or start it manually.")
+        return
+
+    # Wait for startup
+    print("[INIT] Waiting for Ollama to start...", end="", flush=True)
+    for _ in range(30):
+        try:
+            urllib.request.urlopen(url, timeout=1)
+            print(" Done!")
+            return
+        except:
+            time.sleep(1)
+            print(".", end="", flush=True)
+            
+    print("\\n[ERROR] Timed out waiting for Ollama to start. Please check logs or start manually.")
+
 # 2. LLM & AGENTS
 # ---------------------------------------------------------
 # Using local Ollama models for cost/privacy/hardware reasons
-logic_llm = LLM(model="ollama/llama3.2:latest", base_url="http://localhost:11434")
+logic_llm = LLM(model="ollama/phi3:mini", base_url="http://localhost:11434")
 coding_llm = LLM(model="ollama/phi3:mini", base_url="http://localhost:11434")
 
 spec_architect = Agent(
@@ -43,7 +121,8 @@ spec_architect = Agent(
     goal='Analyze user requirements and create a technical execution plan.',
     backstory='You are a senior technical lead. You digest the high-level request and create atomic developer tasks.',
     llm=logic_llm,
-    verbose=True
+    verbose=True,
+    step_callback=log_agent_step
 )
 
 full_stack_dev = Agent(
@@ -52,7 +131,8 @@ full_stack_dev = Agent(
     backstory='You are a pragmatic developer. You write code to the workspace using tools.',
     llm=coding_llm,
     tools=[file_writer, file_reader],
-    verbose=True
+    verbose=True,
+    step_callback=log_agent_step
 )
 
 # 3. KANBAN LOGIC
@@ -129,10 +209,15 @@ def check_approvals():
 
 def run_loop():
     print("--- AI Dev Team Started ---")
+    
+    # Check Ollama
+    ensure_ollama_running()
+    
     print(f"Monitoring {DIRS['todo']}...")
     
     while True:
         # 1. Check Todo
+        # sorted() ensures lexicographical order i.e. 001, 002, 003...
         todo_files = sorted([f for f in os.listdir(DIRS["todo"]) if f.endswith(".md")])
         if todo_files:
             process_ticket(os.path.join(DIRS["todo"], todo_files[0]))
