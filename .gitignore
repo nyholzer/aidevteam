@@ -1,0 +1,25 @@
+# Environments
+.venv/
+venv/
+ENV/
+env/
+.env
+.flaskenv
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / Build
+dist/
+build/
+*.egg-info/
+
+# Unit test / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logic/Brainstorming (If you want to keep them local-only)
+brain/private_notes.md
