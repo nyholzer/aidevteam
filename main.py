@@ -237,8 +237,8 @@ def _execute_crew_workflow(ticket_content, in_progress_path, filename):
 
     # Define Crew Tasks - TEST DRIVEN DEVELOPMENT WORKFLOW
     plan_task = Task(
-        description=f"Analyze this ticket:\n{ticket_content}\nCreate a step-by-step implementation plan with clear success criteria.\n\nIMPORTANT: When specifying tool invocations for file creation, OUTPUT EXACTLY one JSON object that matches the FileWriterTool schema and nothing else. The JSON object must look like: {\"filename\": string, \"directory\": string (optional), \"overwrite\": bool, \"content\": string}. Do NOT include any extra commentary outside the JSON. All file creation MUST be executed via tool calls.",
-        expected_output="A detailed plan listing files to create, code logic, and testable success criteria.",
+        description=f"Analyze this ticket:\n{ticket_content}\n\nCreate a CLEAR step-by-step implementation plan with:\n1. List of files to create (with exact filenames and purpose)\n2. Code logic summary\n3. Testable success criteria\n\nNOTE: You are NOT responsible for writing code now. Just plan. The developers will execute.",
+        expected_output="Structured plan: List of files needed, code requirements, and how to validate success.",
         agent=spec_architect
     )
 
