@@ -127,8 +127,8 @@ spec_architect = Agent(
 
 full_stack_dev = Agent(
     role='Full Stack Developer',
-    goal='Write clean, functional code based on the technical plan.',
-    backstory='You are a pragmatic developer. You write code to the workspace using tools.',
+    goal='Write clean, functional code based on the technical plan. MUST actually create files using the File Writer Tool.',
+    backstory='You are a pragmatic developer. You MUST write code to disk using the File Writer Tool. Do NOT describe what you would do - ACTUALLY DO IT by calling the tool with filename, content, and directory.',
     llm=coding_llm,
     tools=[file_writer, file_reader],
     verbose=True,
@@ -177,22 +177,59 @@ def process_ticket(ticket_path):
     )
 
     test_task = Task(
-        description="Based on the plan, create test cases and test files that verify all requirements. Write these tests to ./workspace/tests/ directory. Tests must be specific and catch real bugs.",
-        expected_output="Test files written to ./workspace/tests/ that validate the requirements.",
+        description="""CRITICAL: You MUST write test files to disk using the File Writer Tool. Do NOT just describe tests.
+
+Based on the plan, create test cases that verify all requirements. 
+For each test file:
+1. Use the File Writer Tool with filename, content, and directory='./workspace/tests'
+2. Write real, runnable test code (use pytest or unittest format)
+3. Tests must be specific and catch real bugs
+
+EXAMPLES of what to do:
+- Call: File Writer Tool with filename='test_example.py', content='import pytest\\ndef test_something():\\n    assert True', directory='./workspace/tests'
+- Do NOT just say "I will create test_example.py" - actually use the tool
+
+Write at least 2-3 test files.""",
+        expected_output="Test files actually written to ./workspace/tests/ that validate the requirements.",
         agent=test_engineer,
         context=[plan_task]
     )
 
     build_task = Task(
-        description="Implement the code based on the plan. Write actual, functional code to ./workspace/ directory. Make sure tests pass.",
-        expected_output="Source code files written to disk that pass all tests.",
+        description="""CRITICAL: You MUST write code files to disk using the File Writer Tool. Do NOT just describe code.
+
+Implement the code based on the plan. For each file:
+1. Use the File Writer Tool with filename, content, and directory='./workspace'
+2. Write actual, complete, functional code (not placeholders or TODOs)
+3. Make sure code logic matches the plan
+
+EXAMPLES of what to do:
+- Call: File Writer Tool with filename='script.py', content='def main():\\n    print("hello")', directory='./workspace'
+- Do NOT just say "I will create script.py" - actually use the tool
+
+After writing all files, verify by reading them back with the File Reader Tool.""",
+        expected_output="Source code files actually written to disk and verified to exist with real content.",
         agent=full_stack_dev,
         context=[plan_task, test_task]
     )
 
     qa_task = Task(
-        description=f"CRITICAL: Read EVERY file created in ./workspace/ (excluding tests). Verify:\n1. Files actually exist\n2. Code is NOT empty, placeholder, or hallucinated\n3. Code implements the plan logically\n4. Tests pass when run\n5. No 'TODO' or incomplete sections remain\nReport any issues found.",
-        expected_output="Detailed QA report: list each file, confirm it has real code, note any issues. If anything is missing or hallucinated, explicitly say 'FAILED: [reason]'",
+        description=f"""CRITICAL VALIDATION: Use the File Reader Tool to actually verify files exist and contain real code.
+
+For EVERY file in the plan:
+1. Use File Reader Tool to read each file from ./workspace/
+2. Check that file exists (if not found, report FAILED: [filename] not found)
+3. Check that content is NOT empty or placeholder text (report FAILED if empty)
+4. Check that code actually implements the requirements (not just "TODO" or "pass")
+5. Report the actual content you read
+
+Report format:
+- File: ./workspace/[filename] - EXISTS/MISSING
+  Content preview: [first 100 chars]
+  Status: PASSED / FAILED: [reason]
+
+If ANY file is missing, says FAILED in your report.""",
+        expected_output="Detailed validation report using File Reader Tool. Report PASSED only if all files exist with real code. Report FAILED: [issue] if anything is wrong.",
         agent=qa_engineer,
         context=[plan_task, test_task, build_task]
     )
