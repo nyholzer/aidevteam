@@ -180,14 +180,14 @@ def process_ticket(ticket_path):
         ticket_content = f.read()
     
     try:
-        _execute_crew_workflow(ticket_content, in_progress_path)
+        _execute_crew_workflow(ticket_content, in_progress_path, filename)
     except Exception as e:
         print(f"[ERROR] Crew execution failed: {e}")
         print("[INFO] Moving ticket back to todo for retry...")
         shutil.move(in_progress_path, os.path.join(DIRS["todo"], filename))
         raise
 
-def _execute_crew_workflow(ticket_content, in_progress_path):
+def _execute_crew_workflow(ticket_content, in_progress_path, filename):
 
     # Define Crew Tasks - TEST DRIVEN DEVELOPMENT WORKFLOW
     plan_task = Task(
@@ -315,6 +315,20 @@ Save corrected files to ./workspace/ directory.""",
 
     # Append Report
     report = f"\n\n## AI Report\n**Status**: {'Implementation Complete.' if not test_failed else 'Completed with issues - manual review needed.'}\n**Summary**: {result}\n\n**Instructions**: Review the files in `workspace/`. If satisfied, change [ ] Approved to [x] Approved below (or just write 'Status: Approved').\n[ ] Approved"
+    
+    # DEBUG: Check what files were actually created
+    print("\n[DEBUG] Files in workspace after crew execution:")
+    for root, dirs, files in os.walk(WORKSPACE_DIR):
+        for file in files:
+            filepath = os.path.join(root, file)
+            rel_path = os.path.relpath(filepath, WORKSPACE_DIR)
+            try:
+                with open(filepath, 'r') as f:
+                    content = f.read()
+                    lines = len(content.split('\n'))
+                    print(f"  ✓ {rel_path} ({len(content)} bytes, {lines} lines)")
+            except:
+                print(f"  ✗ {rel_path} (error reading)")
     
     with open(in_progress_path, 'a') as f:
         f.write(report)
