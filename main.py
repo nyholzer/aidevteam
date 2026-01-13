@@ -137,10 +137,20 @@ full_stack_dev = Agent(
 
 qa_engineer = Agent(
     role='QA Engineer',
-    goal='Verify that all planned files were actually created in the workspace directory.',
-    backstory='You are a meticulous QA engineer. You validate that deliverables exist and are correct. You use the file reader tool to check for file existence.',
+    goal='Verify that all planned files were actually created and contain real, functional code (not hallucinations or placeholder content).',
+    backstory='You are a meticulous QA engineer. You validate that deliverables exist AND are implemented correctly. You read files, check code logic, and run tests.',
     llm=coding_llm,
     tools=[file_reader],
+    verbose=True,
+    step_callback=log_agent_step
+)
+
+test_engineer = Agent(
+    role='Test Engineer',
+    goal='Create comprehensive tests based on requirements to validate implementation before and after development.',
+    backstory='You are a TDD advocate. You write test cases that verify the ticket requirements are met. Tests must be runnable and catch real bugs.',
+    llm=coding_llm,
+    tools=[file_writer, file_reader],
     verbose=True,
     step_callback=log_agent_step
 )
@@ -159,52 +169,63 @@ def process_ticket(ticket_path):
     with open(in_progress_path, 'r') as f:
         ticket_content = f.read()
 
-    # Define Crew Tasks
+    # Define Crew Tasks - TEST DRIVEN DEVELOPMENT WORKFLOW
     plan_task = Task(
-        description=f"Analyze this ticket:\n{ticket_content}\nCreate a step-by-step implementation plan.",
-        expected_output="A list of files to create and the logic for each.",
+        description=f"Analyze this ticket:\n{ticket_content}\nCreate a step-by-step implementation plan with clear success criteria.",
+        expected_output="A detailed plan listing files to create, code logic, and testable success criteria.",
         agent=spec_architect
     )
 
-    build_task = Task(
-        description="Implement the code based on the plan. Save files to ./workspace/ directory.",
-        expected_output="Source code files written to disk.",
-        agent=full_stack_dev,
+    test_task = Task(
+        description="Based on the plan, create test cases and test files that verify all requirements. Write these tests to ./workspace/tests/ directory. Tests must be specific and catch real bugs.",
+        expected_output="Test files written to ./workspace/tests/ that validate the requirements.",
+        agent=test_engineer,
         context=[plan_task]
     )
 
+    build_task = Task(
+        description="Implement the code based on the plan. Write actual, functional code to ./workspace/ directory. Make sure tests pass.",
+        expected_output="Source code files written to disk that pass all tests.",
+        agent=full_stack_dev,
+        context=[plan_task, test_task]
+    )
+
     qa_task = Task(
-        description=f"Verify that all files mentioned in the plan were actually created in ./workspace/. List each file found. Check the plan context for expected files.",
-        expected_output="A detailed report of which files exist and which are missing. If any are missing, report which ones.",
+        description=f"CRITICAL: Read EVERY file created in ./workspace/ (excluding tests). Verify:\n1. Files actually exist\n2. Code is NOT empty, placeholder, or hallucinated\n3. Code implements the plan logically\n4. Tests pass when run\n5. No 'TODO' or incomplete sections remain\nReport any issues found.",
+        expected_output="Detailed QA report: list each file, confirm it has real code, note any issues. If anything is missing or hallucinated, explicitly say 'FAILED: [reason]'",
         agent=qa_engineer,
-        context=[plan_task, build_task]
+        context=[plan_task, test_task, build_task]
     )
 
     crew = Crew(
-        agents=[spec_architect, full_stack_dev, qa_engineer],
-        tasks=[plan_task, build_task, qa_task],
+        agents=[spec_architect, test_engineer, full_stack_dev, qa_engineer],
+        tasks=[plan_task, test_task, build_task, qa_task],
         verbose=True
     )
 
     # Execute
     result = crew.kickoff()
     
-    # Check if QA flagged missing files
+    # Check if QA flagged failures
     qa_result = result if hasattr(result, 'raw') else str(result)
-    missing_files = "missing" in qa_result.lower() or "not found" in qa_result.lower() or "does not exist" in qa_result.lower()
+    test_failed = "failed:" in qa_result.lower() or "missing" in qa_result.lower() or "not found" in qa_result.lower() or "hallucinated" in qa_result.lower() or "empty" in qa_result.lower()
     
-    if missing_files:
-        print(f"\n[QA] Missing files detected. Retrying build...")
-        # Re-run just the build and QA tasks
+    retry_count = 0
+    while test_failed and retry_count < 2:
+        retry_count += 1
+        print(f"\n[QA] Issues detected. Retry attempt {retry_count}/2...")
+        # Re-run the build and QA tasks
         retry_crew = Crew(
             agents=[full_stack_dev, qa_engineer],
             tasks=[build_task, qa_task],
             verbose=True
         )
         result = retry_crew.kickoff()
+        qa_result = result if hasattr(result, 'raw') else str(result)
+        test_failed = "failed:" in qa_result.lower() or "missing" in qa_result.lower() or "not found" in qa_result.lower() or "hallucinated" in qa_result.lower() or "empty" in qa_result.lower()
 
     # Append Report
-    report = f"\n\n## AI Report\n**Status**: Implementation Complete.\n**Summary**: {result}\n\n**Instructions**: Review the files in `workspace/`. If satisfied, change [ ] Approved to [x] Approved below (or just write 'Status: Approved').\n[ ] Approved"
+    report = f"\n\n## AI Report\n**Status**: {'Implementation Complete.' if not test_failed else 'Completed with issues - manual review needed.'}\n**Summary**: {result}\n\n**Instructions**: Review the files in `workspace/`. If satisfied, change [ ] Approved to [x] Approved below (or just write 'Status: Approved').\n[ ] Approved"
     
     with open(in_progress_path, 'a') as f:
         f.write(report)
