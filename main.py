@@ -168,9 +168,9 @@ def ensure_ollama_running():
 # 2. LLM & AGENTS
 # ---------------------------------------------------------
 # Using local Ollama models for cost/privacy/hardware reasons
-# qwen2:7b is better at JSON tool-calling and instruction-following vs neural-chat:7b
-logic_llm = LLM(model="ollama/qwen2:7b", base_url="http://localhost:11434", temperature=0)
-coding_llm = LLM(model="ollama/qwen2:7b", base_url="http://localhost:11434", temperature=0)
+# neural-chat:7b with stricter prompts, temperature=0, and enhanced fallback for JSON tool-calling
+logic_llm = LLM(model="ollama/neural-chat:7b", base_url="http://localhost:11434", temperature=0)
+coding_llm = LLM(model="ollama/neural-chat:7b", base_url="http://localhost:11434", temperature=0)
 
 spec_architect = Agent(
     role='Spec Architect',
@@ -243,23 +243,36 @@ def _execute_crew_workflow(ticket_content, in_progress_path, filename):
     )
 
     test_task = Task(
-        description="""CRITICAL: Call File Writer Tool to create test files. Do NOT describe what you would do.
-For each test file from the plan:
-- Call File Writer Tool with: {"filename": "test_[name].py", "directory": "./workspace/tests", "overwrite": true, "content": "[pytest code]"}
-- Write REAL pytest code (not placeholders)
-- Create at least 2-3 test files by calling the tool multiple times""",
-        expected_output="Test files in ./workspace/tests with real pytest test code.",
+        description="""CRITICAL: You MUST use the File Writer Tool. Do NOT describe actions.
+
+Follow this exact format for EACH file:
+
+Thought: I need to create a test file
+Action: File Writer Tool
+Action Input: {"filename": "test_case.py", "directory": "./workspace/tests", "overwrite": true, "content": "import pytest\\ndef test_example():\\n    assert True"}
+
+Repeat for each test file (at least 2-3 times). Replace test_case.py with actual names and [content] with real pytest code.""",
+        expected_output="Test files created in ./workspace/tests with real pytest code.",
         agent=test_engineer,
         context=[plan_task]
     )
 
     build_task = Task(
-        description="""CRITICAL: Call File Writer Tool to create code files. Do NOT describe what you would do.
-For each code file from the plan:
-- Call File Writer Tool with: {"filename": "[name]", "directory": "./workspace", "overwrite": true, "content": "[complete code]"}
-- Write COMPLETE FUNCTIONAL code (no TODOs, no placeholders)
-- After writing all files, call File Reader Tool to verify each file exists with real content""",
-        expected_output="Source code files in ./workspace with complete functional code verified by reading them back.",
+        description="""CRITICAL: You MUST use the File Writer Tool. Do NOT describe actions.
+
+Follow this exact format for EACH file:
+
+Thought: I need to create a source file
+Action: File Writer Tool
+Action Input: {"filename": "module.py", "directory": "./workspace", "overwrite": true, "content": "[complete functional code here]"}
+
+Then verify by reading it back:
+Thought: I should verify the file was created
+Action: Read a file's content
+Action Input: {"file_path": "./workspace/module.py", "start_line": 1, "line_count": null}
+
+Repeat tool calls for each file. Use real, complete code (no TODOs or placeholders).""",
+        expected_output="Source code files created in ./workspace with complete code, verified by reading them back.",
         agent=full_stack_dev,
         context=[plan_task, test_task]
     )
